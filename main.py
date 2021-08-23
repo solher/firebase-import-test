@@ -13,7 +13,7 @@ from multiprocessing import Pool
 from multiprocessing import freeze_support
 
 
-firebase_admin.initialize_app(credentials.Certificate("./justwatch-auth-dev-8-firebase.json"))
+firebase_admin.initialize_app(credentials.Certificate("./service-account.json"))
 
 
 def run_multiprocessing(func, i, n_processors):

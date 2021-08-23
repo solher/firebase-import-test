@@ -25,7 +25,7 @@ func main() {
 func run(args []string, stdout io.Writer) error {
 	ctx := context.Background()
 
-	app, err := firebase.NewApp(ctx, nil, firebaseclientopt.WithCredentialsFile("./justwatch-auth-dev-8-firebase.json"))
+	app, err := firebase.NewApp(ctx, nil, firebaseclientopt.WithCredentialsFile("./service-account.json"))
 	if err != nil {
 		return err
 	}
