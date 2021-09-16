@@ -15,7 +15,7 @@ from flask import Flask
 from flask import request
 app = Flask(__name__)
 
-firebase_admin.initialize_app(credentials.Certificate("./justwatch-auth-dev-7-firebase.json"))
+firebase_admin.initialize_app(credentials.Certificate("./justwatch-auth-dev-9-firebase.json"))
 
 @app.route("/", methods = ['POST'])
 def handler():
@@ -26,16 +26,12 @@ def handler():
 		providerData = []
 		for y in x['Params']['providerUserInfo']:
 			providerData.append(auth.UserProvider(
-      	uid=y['rawId'],
-      	provider_id=y['providerId'],
+      			uid=y['rawId'],
+      			provider_id=y['providerId'],
 				email=y['email'] if y['email'] != '' else None,
 				display_name=y['displayName'] if y['displayName'] != '' else None,
 				photo_url=y['photoUrl'] if y['photoUrl'] != '' else None
-      ))
-
-		val = x['Params']['passwordHash'] if 'passwordHash' in x['Params'] else None
-		if val != None:
-			print(val)
+      		))
 
 		users.append(auth.ImportUserRecord(
 			uid=x['Params']['localId'],
@@ -48,12 +44,10 @@ def handler():
 			),
 			provider_data=providerData,
 			custom_claims={"jw_login_id": x['Params']['localId']},
-			password_hash=x['Params']['passwordHash'].encode('UTF-8') if 'passwordHash' in x['Params'] else None
+			password_hash=base64.b64decode(x['Params']['passwordHash'].encode('UTF-8')) if 'passwordHash' in x['Params'] else None
 		))
 
 	hash_alg = auth.UserImportHash.bcrypt()
-
-	print('importing')
 
 	try:
 		start = time.time()
