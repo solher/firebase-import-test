@@ -15,14 +15,20 @@ from flask import Flask
 from flask import request
 app = Flask(__name__)
 
-firebase_admin.initialize_app(credentials.Certificate("./justwatch-auth-dev-9-firebase.json"))
+firebase_admin.initialize_app(credentials.Certificate("./justwatch-auth-dev1.json"))
 
-@app.route("/", methods = ['POST'])
+@app.route("/import", methods = ['POST'])
 def handler():
 	data = request.get_json()
+	op_name = request.args.get('op_name')
 
 	users = []
 	for x in data:
+		if op_name == "bcrypt" and 'passwordHash' not in x['Params']:
+			raise ValueError('Password hash is empty for bcrypt')
+		elif op_name == "scrypt" and ('passwordHash' not in x['Params'] or 'salt' not in x['Params']):
+			raise ValueError('Password hash or salt is empty for scrypt')
+
 		providerData = []
 		for y in x['Params']['providerUserInfo']:
 			providerData.append(auth.UserProvider(
@@ -35,7 +41,7 @@ def handler():
 
 		users.append(auth.ImportUserRecord(
 			uid=x['Params']['localId'],
-			email=x['Params']['email'] if 'email' in x['Params'] else None,
+			email=x['Params']['email'] if 'email' in x['Params'] and x['Params']['email'] != '' else None,
 			email_verified=x['Params']['emailVerified'] if 'emailVerified' in x['Params'] else None,
 			display_name=x['Params']['displayName'] if x['Params']['displayName'] != '' else None,
 			photo_url=x['Params']['photoUrl'] if x['Params']['photoUrl'] != '' else None,
@@ -44,10 +50,21 @@ def handler():
 			),
 			provider_data=providerData,
 			custom_claims={"jw_login_id": x['Params']['localId']},
-			password_hash=base64.b64decode(x['Params']['passwordHash'].encode('UTF-8')) if 'passwordHash' in x['Params'] else None
+			password_hash=base64.b64decode(x['Params']['passwordHash']+'==') if 'passwordHash' in x['Params'] else None,
+			password_salt=base64.b64decode(x['Params']['salt']+'==') if 'salt' in x['Params'] else None
 		))
 
-	hash_alg = auth.UserImportHash.bcrypt()
+	hash_alg = None
+	if op_name == "bcrypt":
+		hash_alg = auth.UserImportHash.bcrypt()
+	elif op_name == "scrypt":
+		hash_alg = auth.UserImportHash.scrypt(
+			key=base64.b64decode('Bl2QcT0lFgSqZTQGFOktl2GIBu4dcFfX8Ox7ltl0DhVsf3Tmzb85nDRpXgsSjWHxr/Ej1oMgZ25AzEUcwBdzIw=='),
+			salt_separator=base64.b64decode('Bw=='),
+			rounds=8,
+			memory_cost=14
+		)
+
 
 	try:
 		start = time.time()
@@ -59,6 +76,8 @@ def handler():
 		print('Error importing users:', error)
 
 	return 'OK'
+
+app.run()
 
 
 
